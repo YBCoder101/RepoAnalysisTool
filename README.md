@@ -99,14 +99,6 @@ Measured on the development machine (Node 18, deep clones over the network):
 
 A single parse pipeline streams `git log` output; the resulting snapshot is cached on disk (13 MB for the Git repository), so a server restart reloads all repositories without re-parsing. Repository-wide metrics scan every selected commit in one pass; commit pages, tree and path lookups are served in milliseconds.
 
-## Progress
-
-- [x] Stage 0 — scaffold: Express server, `start.sh`, README
-- [x] Stage 1 — ingestion: clone from URL / zip upload, multi-repo support
-- [x] Stage 2 — metrics engine + API (all metric categories, filtering)
-- [x] Stage 3 — dashboard UI
-- [x] Stage 4 — author merging (mailmap + manual)
-- [x] Stage 5 — polish, performance, final verification
 
 ## Test repositories
 
