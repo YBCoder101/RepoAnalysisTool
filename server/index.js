@@ -6,6 +6,7 @@ const multer = require('multer');
 
 const { Store } = require('./store');
 const { startUrlIngest, startZipIngest } = require('./ingest');
+const { computeMetrics, listCommits, listAuthors, listTree } = require('./metrics');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
@@ -66,6 +67,34 @@ app.delete('/api/repos/:id', async (req, res) => {
   res.status(204).end();
 });
 
+// --- metrics API ------------------------------------------------------------
+
+const requireReadyRepo = (req, res, next) => {
+  const repo = store.get(req.params.id);
+  if (!repo) return res.status(404).json({ error: 'unknown repository' });
+  if (repo.status !== 'ready') {
+    return res.status(409).json({ error: 'repository is not ready yet', status: repo.status, phase: repo.phase });
+  }
+  req.repo = repo;
+  next();
+};
+
+app.get('/api/repos/:id/commits', requireReadyRepo, (req, res) => {
+  res.json(listCommits(req.repo, req.query));
+});
+
+app.get('/api/repos/:id/metrics', requireReadyRepo, (req, res) => {
+  res.json(computeMetrics(req.repo, req.query));
+});
+
+app.get('/api/repos/:id/authors', requireReadyRepo, (req, res) => {
+  res.json(listAuthors(req.repo));
+});
+
+app.get('/api/repos/:id/tree', requireReadyRepo, (req, res) => {
+  res.json(listTree(req.repo, req.query.path || ''));
+});
+
 // --- static dashboard -------------------------------------------------------
 
 app.use(express.static(path.join(ROOT, 'public')));
@@ -76,7 +105,7 @@ app.use('/vendor/chart.js', express.static(path.join(ROOT, 'node_modules', 'char
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('[RAT]', err.message || err);
+  if (!err.status || err.status >= 500) console.error('[RAT]', err.message || err);
   const status = err.status || (err.code === 'LIMIT_FILE_SIZE' ? 413 : 500);
   const message = err.code === 'LIMIT_FILE_SIZE' ? 'uploaded file is too large' : err.message || 'internal error';
   res.status(status).json({ error: message });
