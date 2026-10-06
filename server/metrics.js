@@ -51,10 +51,15 @@ function resolveAuthor(repo, q) {
 
 /** Parse and validate filter parameters for the metrics endpoints. */
 function parseFilters(repo, q) {
-  let path = String(q.path || '').replace(/^\/+|\/+$/g, '');
+  // A trailing slash forces the directory variant when a path is both a file
+  // and a directory at different points of the history (e.g. "git-gui").
+  const rawPath = String(q.path || '');
+  const forceDir = /\/+$/.test(rawPath);
+  const path = rawPath.replace(/^\/+|\/+$/g, '');
   let pathType = 'repo';
   if (path) {
-    if (repo.fileId.has(path)) pathType = 'file';
+    if (forceDir && repo.dirs.has(path)) pathType = 'dir';
+    else if (repo.fileId.has(path)) pathType = 'file';
     else if (repo.dirs.has(path)) pathType = 'dir';
     else throw badRequest('unknown file or directory: ' + path);
   }
@@ -142,9 +147,9 @@ function computeMetrics(repo, q) {
   let removed = 0;
   let mods = 0;
   const perAuthor = new Map(); // group author id -> { mods, churn }
-  const children = new Map(); // child path -> { added, removed, mods }
+  const children = new Map(); // "kind\0path" -> { path, type, added, removed, mods }
   const timeline = new Map(); // bucket -> { added, removed, commits }
-  const touchedChildren = new Map(); // per-commit: child path -> true
+  const touchedChildren = new Map(); // per-commit: child key -> true
 
   for (const ci of idx) {
     const c = commits[ci];
@@ -168,24 +173,31 @@ function computeMetrics(repo, q) {
       if (churn > 0) commitTouched = true;
 
       if (isRepo || isDir) {
+        // Immediate child of the scope. Ops on the child path itself belong to
+        // the file object, ops below it to the directory object; a path can be
+        // both at different points of the history, so the two are kept apart.
         let childPath;
+        let kind;
         if (isRepo) {
           const slash = p.indexOf('/');
           childPath = slash === -1 ? p : p.slice(0, slash);
+          kind = slash === -1 ? 'file' : 'dir';
         } else {
           const rest = p.slice(prefix.length);
           const slash = rest.indexOf('/');
           childPath = slash === -1 ? p : prefix + rest.slice(0, slash);
+          kind = slash === -1 ? 'file' : 'dir';
         }
-        let ch = children.get(childPath);
+        const key = kind + '\0' + childPath;
+        let ch = children.get(key);
         if (!ch) {
-          ch = { added: 0, removed: 0, mods: 0 };
-          children.set(childPath, ch);
+          ch = { path: childPath, type: kind, added: 0, removed: 0, mods: 0 };
+          children.set(key, ch);
         }
         ch.added += a;
         ch.removed += r;
-        if (churn > 0 && !touchedChildren.get(childPath)) {
-          touchedChildren.set(childPath, true);
+        if (churn > 0 && !touchedChildren.get(key)) {
+          touchedChildren.set(key, true);
           ch.mods += 1;
         }
       }
@@ -237,13 +249,13 @@ function computeMetrics(repo, q) {
     .sort((x, y) => y.churn - x.churn);
 
   const childRows = isRepo || isDir
-    ? Array.from(children.entries())
-        .map(([p, v]) => {
+    ? Array.from(children.values())
+        .map((v) => {
           const childChurn = v.added + v.removed;
           return {
-            path: p,
-            name: p.split('/').pop(),
-            type: repo.dirs.has(p) ? 'dir' : 'file',
+            path: v.path,
+            name: v.path.split('/').pop(),
+            type: v.type,
             added: v.added,
             removed: v.removed,
             growth: v.added - v.removed,

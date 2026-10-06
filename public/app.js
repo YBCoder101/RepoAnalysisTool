@@ -259,7 +259,9 @@ function syncFilterControls() {
 }
 
 function setPath(p) {
-  state.filters.path = String(p || '').replace(/^\/+|\/+$/g, '');
+  // A trailing slash is kept: it selects the directory variant when a path
+  // is both a file and a directory somewhere in the history (e.g. "git-gui").
+  state.filters.path = String(p || '').replace(/^\/+/, '');
   $('#f-path').value = state.filters.path;
   refreshMetrics();
 }
@@ -428,7 +430,7 @@ function renderChildrenTable(children) {
     .slice(0, 15)
     .map(
       (c) => `<tr class="clickable">
-        <td><span class="obj-name" data-scope="${esc(c.path)}" title="Scope metrics to ${esc(c.path)}">${c.type === 'dir' ? '📁' : '📄'} ${esc(c.name)}</span></td>
+        <td><span class="obj-name" data-scope="${esc(c.path)}${c.type === 'dir' ? '/' : ''}" title="Scope metrics to ${esc(c.path)}">${c.type === 'dir' ? '📁' : '📄'} ${esc(c.name)}</span></td>
         ${metricCells(c)}
       </tr>`
     )
@@ -456,7 +458,8 @@ function renderOwnership(authors) {
 
 // ---------- files tab -------------------------------------------------------
 
-function buildBreadcrumb(path) {
+function buildBreadcrumb(rawPath) {
+  const path = String(rawPath || '').replace(/\/+$/, '');
   if (!path) return '<span class="here">⌂ repo root</span>';
   const segs = path.split('/');
   const parts = ['<button data-nav="" title="Back to repository root">⌂ repo root</button>'];
@@ -490,8 +493,8 @@ async function renderFiles() {
       const t = await api(`/api/repos/${repo.id}/tree?path=${encodeURIComponent(path)}`);
       treeKids = t.children;
     } catch (e) { /* fall back to metrics children only */ }
-    const metricBy = new Map(m.children.map((c) => [c.path, c]));
-    if (treeKids) rows = treeKids.map((k) => ({ path: k.path, name: k.name, type: k.type, m: metricBy.get(k.path) || null }));
+    const metricBy = new Map(m.children.map((c) => [c.type + '\0' + c.path, c]));
+    if (treeKids) rows = treeKids.map((k) => ({ path: k.path, name: k.name, type: k.type, m: metricBy.get(k.type + '\0' + k.path) || null }));
     else rows = m.children.map((c) => ({ path: c.path, name: c.name, type: c.type, m: c }));
   }
 
@@ -501,7 +504,7 @@ async function renderFiles() {
     rows
       .map(
         (r) => `<tr class="clickable${r.m ? '' : ' no-activity'}">
-          <td><span class="obj-name" data-scope="${esc(r.path)}" title="Scope metrics to ${esc(r.path)}">${r.type === 'dir' ? '📁' : '📄'} ${esc(r.name)}</span></td>
+          <td><span class="obj-name" data-scope="${esc(r.path)}${r.type === 'dir' ? '/' : ''}" title="Scope metrics to ${esc(r.path)}">${r.type === 'dir' ? '📁' : '📄'} ${esc(r.name)}</span></td>
           ${r.m ? metricCells(r.m) : '<td class="num">–</td>'.repeat(7)}
         </tr>`
       )
