@@ -1,28 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="RAT logo">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1b2740"/>
-      <stop offset="1" stop-color="#0e1320"/>
+      <stop offset="0" stop-color="#1f2335"/>
+      <stop offset="1" stop-color="#16161e"/>
+    </linearGradient>
+    <linearGradient id="fur" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7aa2f7"/>
+      <stop offset="1" stop-color="#bb9af7"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="61" height="61" rx="14" fill="url(#bg)" stroke="#263351" stroke-width="3"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="14" fill="url(#bg)" stroke="#2f334d" stroke-width="3"/>
   <!-- ears -->
-  <circle cx="21" cy="20" r="8.5" fill="#4f8cff" opacity="0.35"/>
-  <circle cx="43" cy="20" r="8.5" fill="#4f8cff" opacity="0.35"/>
-  <circle cx="21" cy="20" r="4" fill="#4f8cff" opacity="0.6"/>
-  <circle cx="43" cy="20" r="4" fill="#4f8cff" opacity="0.6"/>
+  <circle cx="21" cy="20" r="8.5" fill="#7dcfff" opacity="0.3"/>
+  <circle cx="43" cy="20" r="8.5" fill="#7dcfff" opacity="0.3"/>
+  <circle cx="21" cy="20" r="4" fill="#bb9af7" opacity="0.55"/>
+  <circle cx="43" cy="20" r="4" fill="#bb9af7" opacity="0.55"/>
   <!-- whiskers (tucked behind the cheeks) -->
-  <g stroke="#93a1bb" stroke-width="1.7" stroke-linecap="round" opacity="0.75">
+  <g stroke="#565f89" stroke-width="1.7" stroke-linecap="round" opacity="0.85">
     <path d="M7 32.5 H13.5"/>
     <path d="M7 38.5 H13.5"/>
     <path d="M50.5 32.5 H57"/>
     <path d="M50.5 38.5 H57"/>
   </g>
   <!-- head -->
-  <path d="M32 14 C43 14 50 21 50 30 C50 41.5 41.5 50 32 50 C22.5 50 14 41.5 14 30 C14 21 21 14 32 14 Z" fill="#4f8cff"/>
+  <path d="M32 14 C43 14 50 21 50 30 C50 41.5 41.5 50 32 50 C22.5 50 14 41.5 14 30 C14 21 21 14 32 14 Z" fill="url(#fur)"/>
   <!-- eyes -->
-  <circle cx="25.5" cy="30" r="2.7" fill="#0d1424"/>
-  <circle cx="38.5" cy="30" r="2.7" fill="#0d1424"/>
+  <circle cx="25.5" cy="30" r="2.7" fill="#16161e"/>
+  <circle cx="38.5" cy="30" r="2.7" fill="#16161e"/>
   <!-- nose -->
-  <path d="M29.4 40.5 L34.6 40.5 L32 44.2 Z" fill="#0d1424"/>
+  <path d="M29.4 40.5 L34.6 40.5 L32 44.2 Z" fill="#16161e"/>
 </svg>

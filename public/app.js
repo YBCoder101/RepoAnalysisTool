@@ -478,16 +478,16 @@ function renderTimeline(rows, cs) {
   }
   note.textContent = `${fmtInt(cs.size)} commits in H · timeline bucketed per ${cs.granularity}`;
   if (typeof Chart === 'undefined') return; // Chart.js failed to load (offline)
-  Chart.defaults.color = '#93a1bb';
-  Chart.defaults.borderColor = 'rgba(148, 163, 184, .15)';
+  Chart.defaults.color = '#9aa5ce';
+  Chart.defaults.borderColor = 'rgba(154, 165, 206, .14)';
   if (state.chart) state.chart.destroy();
   state.chart = new Chart($('#timeline-chart'), {
     data: {
       labels: rows.map((r) => fmtDate(r.t)),
       datasets: [
-        { type: 'bar', label: 'l+ added', data: rows.map((r) => r.added), backgroundColor: 'rgba(63, 185, 80, .75)', stack: 'lines' },
-        { type: 'bar', label: 'l− removed', data: rows.map((r) => r.removed), backgroundColor: 'rgba(248, 81, 73, .75)', stack: 'lines' },
-        { type: 'line', label: 'commits', data: rows.map((r) => r.commits), borderColor: '#4f8cff', backgroundColor: '#4f8cff', yAxisID: 'y2', tension: .25, pointRadius: rows.length > 60 ? 0 : 2 },
+        { type: 'bar', label: 'l+ added', data: rows.map((r) => r.added), backgroundColor: 'rgba(158, 206, 106, .8)', stack: 'lines' },
+        { type: 'bar', label: 'l− removed', data: rows.map((r) => r.removed), backgroundColor: 'rgba(247, 118, 142, .8)', stack: 'lines' },
+        { type: 'line', label: 'commits', data: rows.map((r) => r.commits), borderColor: '#7aa2f7', backgroundColor: '#7aa2f7', yAxisID: 'y2', tension: .25, pointRadius: rows.length > 60 ? 0 : 2 },
       ],
     },
     options: {
