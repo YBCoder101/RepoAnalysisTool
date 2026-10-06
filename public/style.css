@@ -92,7 +92,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   padding: 2px 7px; font-size: 13px; border-radius: 4px; line-height: 1.2;
 }
 .icon-btn:hover { color: var(--red); background: var(--panel-2); }
-label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 200px; }
+label.field.grow { min-width: 300px; }
 label.field > span:first-child { text-transform: uppercase; letter-spacing: .4px; font-size: 11px; }
 .grow { flex: 1; min-width: 0; }
 
