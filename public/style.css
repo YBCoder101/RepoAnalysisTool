@@ -34,19 +34,22 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 1px 5px; b
 
 /* ---------- top bar ---------- */
 .topbar {
-  display: flex; align-items: baseline; gap: 16px;
-  padding: 10px 20px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 9px 22px;
   background: var(--bg-soft);
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 20;
 }
-.brand { font-weight: 700; font-size: 18px; letter-spacing: .5px; color: var(--accent); }
-.brand span { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
-.hint { color: var(--muted); font-size: 12px; margin-left: auto; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand .logo { width: 30px; height: 30px; display: block; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
+.brand-text strong { font-size: 17px; letter-spacing: .6px; color: var(--accent); }
+.brand-text small { font-size: 11px; color: var(--muted); }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 
-/* ---------- layout ---------- */
-.layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; align-items: start; }
-.main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+/* ---------- page layout ---------- */
+.page { max-width: 1240px; margin: 0 auto; padding: 18px 22px 48px; }
+.view { display: flex; flex-direction: column; gap: 14px; }
 
 /* ---------- panels ---------- */
 .panel {
@@ -57,7 +60,7 @@ code { font-family: var(--mono); background: var(--panel-2); padding: 1px 5px; b
 }
 .panel h2 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
 .panel h3 { margin: 0 0 10px; font-size: 14px; }
-.sidebar { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 56px; }
+.home-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 62px; }
 .badge {
   display: inline-block; min-width: 20px; text-align: center;
   background: var(--panel-2); border: 1px solid var(--border);
@@ -97,27 +100,44 @@ label.field.grow { min-width: 300px; }
 label.field > span:first-child { text-transform: uppercase; letter-spacing: .4px; font-size: 11px; }
 .grow { flex: 1; min-width: 0; }
 
-/* ---------- repo list ---------- */
-.repo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.repo-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+/* ---------- home: hero + repository cards ---------- */
+.hero {
+  display: flex; align-items: center; gap: 18px; padding: 20px 22px;
+  background: linear-gradient(135deg, var(--panel-2), var(--panel));
+}
+.hero-logo { width: 64px; height: 64px; flex: none; }
+.hero h1 { margin: 0 0 4px; font-size: 22px; }
+.hero p { margin: 2px 0; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+.repo-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.repo-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 13px 14px; border: 1px solid var(--border); border-radius: 10px;
   background: var(--bg-soft); cursor: pointer;
 }
-.repo-item:hover { border-color: var(--accent); }
-.repo-item.active { border-color: var(--accent); background: var(--panel-2); }
-.repo-item.failed { border-color: var(--red); }
-.repo-main { min-width: 0; flex: 1; }
-.repo-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.repo-status { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.repo-item.failed .repo-status { color: var(--red); }
+.repo-card:hover { border-color: var(--accent); }
+.repo-card.active { border-color: var(--accent); background: var(--panel-2); }
+.repo-card.failed { border-color: var(--red); }
+.repo-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.repo-card-head h3 { margin: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-src { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-stats { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.repo-stats strong { color: var(--text); font-family: var(--mono); }
+.repo-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+.status-badge {
+  flex: none; font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted);
+}
+.status-badge.status-ready { color: var(--green); border-color: var(--green); }
+.status-badge.status-error { color: var(--red); border-color: var(--red); }
+.status-badge.status-importing { color: var(--yellow); border-color: var(--yellow); }
 
-/* ---------- welcome ---------- */
-.welcome h2 { color: var(--text); text-transform: none; font-size: 18px; letter-spacing: 0; }
-.welcome ul { margin: 8px 0; padding-left: 20px; }
-.welcome li { margin: 4px 0; }
-
-/* ---------- status panel ---------- */
+/* ---------- workspace header + status panel ---------- */
+.repo-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.repo-head-main h2 { margin: 0 0 2px; font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.repo-head-main p { margin: 0; }
+.repo-head-stats { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 13px; }
+.repo-head-stats strong { color: var(--text); font-family: var(--mono); font-weight: 600; }
 .status-panel h3 { margin-top: 0; }
 .progress {
   height: 8px; border-radius: 6px; background: var(--bg-soft);
@@ -162,7 +182,7 @@ label.field > span:first-child { text-transform: uppercase; letter-spacing: .4px
 
 /* ---------- tables ---------- */
 .two-col { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; align-items: start; }
-@media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } .layout { grid-template-columns: 1fr; } .sidebar { position: static; } }
+@media (max-width: 1100px) { .two-col, .home-grid { grid-template-columns: 1fr; } .home-side { position: static; } }
 .table-wrap { overflow: auto; max-height: 480px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }

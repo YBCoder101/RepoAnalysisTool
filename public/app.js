@@ -10,7 +10,7 @@ const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
 
 const state = {
   repos: [],
-  repoId: localStorage.getItem('rat.repo') || null,
+  repoId: null,
   loadedRepoId: null,
   tab: 'overview',
   filters: { path: '', author: 'all', mode: 'all', from: '', to: '', hashes: [] },
@@ -59,33 +59,102 @@ function toast(msg, kind) {
 
 const selectedRepo = () => state.repos.find((r) => r.id === state.repoId) || null;
 
+// ---------- navigation (hash router) ----------------------------------------
+
+const TABS = ['overview', 'files', 'authors', 'commits'];
+const repoHash = (id, tab) => `#/repo/${id}${tab ? '/' + tab : ''}`;
+
+/** Parse location.hash into { view: 'home' } or { view: 'repo', id, tab }. */
+function parseRoute() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (parts[0] === 'repo' && parts[1]) {
+    return { view: 'repo', id: parts[1], tab: TABS.includes(parts[2]) ? parts[2] : 'overview' };
+  }
+  return { view: 'home' };
+}
+
+/** Navigate: change the hash (hashchange applies the route); re-apply when equal. */
+function nav(hash) {
+  if (location.hash === hash) applyRoute();
+  else location.hash = hash;
+}
+
+function showView(name) {
+  $('#view-home').classList.toggle('hidden', name !== 'home');
+  $('#view-repo').classList.toggle('hidden', name !== 'repo');
+  $('#top-tag').classList.toggle('hidden', name !== 'home');
+  $('#top-back').classList.toggle('hidden', name !== 'repo');
+}
+
+function showHome() {
+  showView('home');
+  document.title = 'RAT — Repo Analysis Tool';
+}
+
+/** Apply the current hash: the repository manager, or one repository's workspace. */
+async function applyRoute() {
+  const r = parseRoute();
+  if (r.view === 'home') {
+    if (location.hash && location.hash !== '#/') history.replaceState(null, '', '#/'); // unknown route
+    return showHome();
+  }
+  const repo = state.repos.find((x) => x.id === r.id);
+  if (!repo) {
+    history.replaceState(null, '', '#/');
+    return showHome();
+  }
+  const tabChanged = state.tab !== r.tab;
+  state.tab = r.tab;
+  document.title = 'RAT — ' + repo.name;
+  if (repo.id !== state.repoId || state.loadedRepoId !== repo.id) {
+    await selectRepo(repo.id);
+  } else {
+    showWorkspace(repo);
+    if (tabChanged) renderActiveTab();
+  }
+}
+
 // ---------- repositories ----------------------------------------------------
 
 function renderRepos() {
   $('#repo-count').textContent = state.repos.length;
   $('#repo-empty').classList.toggle('hidden', state.repos.length > 0);
 
-  $('#repo-list').innerHTML = state.repos
+  $('#repo-cards').innerHTML = state.repos
     .map((r) => {
-      const s = r.stats;
-      let status;
-      if (r.status === 'ready') status = `${fmtInt(s.commits)} commits · ${fmtInt(s.files)} files · ${fmtInt(s.authors)} authors`;
-      else if (r.status === 'error') status = 'failed — ' + esc(r.error || 'unknown error');
-      else {
-        const pct = r.progress && r.progress.total ? ` (${Math.round((r.progress.parsed / r.progress.total) * 100)}%)` : '';
-        status = esc(r.phase || 'working') + pct;
-      }
-      const cls = ['repo-item'];
+      const cls = ['repo-card'];
       if (r.id === state.repoId) cls.push('active');
       if (r.status === 'error') cls.push('failed');
-      const title = r.source.url || r.source.file || '';
-      return `<li class="${cls.join(' ')}" data-id="${r.id}" title="${esc(title)}">
-        <div class="repo-main">
-          <div class="repo-name">${esc(r.name)}</div>
-          <div class="repo-status">${status}</div>
+      let body;
+      if (r.status === 'ready') {
+        const s = r.stats;
+        body = `<div class="repo-stats">
+            <span><strong>${fmtInt(s.commits)}</strong> commits</span>
+            <span><strong>${fmtInt(s.files)}</strong> files</span>
+            <span><strong>${fmtInt(s.authors)}</strong> authors</span>
+          </div>
+          <div class="muted small">${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}</div>`;
+      } else if (r.status === 'error') {
+        body = `<p class="status-error small">${esc(r.error || 'analysis failed')}</p>`;
+      } else {
+        const p = r.progress || { parsed: 0, total: 0 };
+        const pct = p.total ? Math.round((p.parsed / p.total) * 100) : 0;
+        body = `<p class="muted small">${esc(r.phase || 'working')}${p.total ? ` — ${fmtInt(p.parsed)} / ${fmtInt(p.total)} commits (${pct}%)` : ''}</p>
+          <div class="progress"><div style="width:${pct}%"></div></div>`;
+      }
+      const src = r.source.url || r.source.file || '';
+      return `<article class="${cls.join(' ')}" data-id="${r.id}" title="${esc(src)}">
+        <header class="repo-card-head">
+          <h3>${esc(r.name)}</h3>
+          <span class="status-badge status-${r.status}">${esc(r.status)}</span>
+        </header>
+        <p class="repo-src muted small">${esc(src)}</p>
+        ${body}
+        <div class="repo-actions">
+          <button class="primary small-btn" data-open="${r.id}">${r.status === 'ready' ? 'Open dashboard' : 'View'}</button>
+          <button class="small-btn ghost" data-del="${r.id}">Remove</button>
         </div>
-        <button class="icon-btn" data-del="${r.id}" title="Remove repository">✕</button>
-      </li>`;
+      </article>`;
     })
     .join('');
 
@@ -110,7 +179,8 @@ function ensurePolling() {
       if (!busy) {
         clearInterval(state.poll);
         state.poll = null;
-        if (repo && repo.status === 'ready' && state.loadedRepoId !== repo.id) loadRepo();
+        const r = parseRoute();
+        if (repo && repo.status === 'ready' && state.loadedRepoId !== repo.id && r.view === 'repo' && r.id === repo.id) loadRepo();
       }
     } catch (e) { /* server briefly unavailable: keep polling */ }
   }, 1500);
@@ -135,8 +205,8 @@ function renderStatusPanel(repo) {
 }
 
 function showWorkspace(repo) {
-  $('#welcome').classList.add('hidden');
-  $('#workspace').classList.remove('hidden');
+  showView('repo');
+  renderRepoHead(repo || {});
   if (repo && repo.status === 'ready') {
     $('#repo-status').classList.add('hidden');
     $('#analysis-ui').classList.remove('hidden');
@@ -145,12 +215,32 @@ function showWorkspace(repo) {
   }
 }
 
+/** Static facts about the open repository, shown above the filters. */
+function renderRepoHead(repo) {
+  const src = repo.source ? repo.source.url || repo.source.file || '' : '';
+  const s = repo.stats;
+  const stats = s
+    ? `<div class="repo-head-stats">
+        <span><strong>${fmtInt(s.commits)}</strong> commits</span>
+        <span><strong>${fmtInt(s.files)}</strong> files</span>
+        <span><strong>${fmtInt(s.dirs)}</strong> dirs</span>
+        <span><strong>${fmtInt(s.authors)}</strong> authors</span>
+        <span>${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}</span>
+        <span class="mono">${esc((s.head || '').slice(0, 10))}</span>
+      </div>`
+    : '';
+  $('#repo-head').innerHTML = `<div class="repo-head-main">
+      <h2>${esc(repo.name || 'repository')}</h2>
+      <p class="muted small">${esc(src)}</p>
+    </div>
+    ${stats}`;
+}
+
 async function selectRepo(id) {
   const repo = state.repos.find((r) => r.id === id);
   if (!repo) return;
   if (id !== state.repoId) {
     state.repoId = id;
-    localStorage.setItem('rat.repo', id);
     state.filters = { path: '', author: 'all', mode: 'all', from: '', to: '', hashes: [] };
     state.picker.selected = new Set();
     state.mergePicks.clear();
@@ -198,15 +288,9 @@ async function deleteRepo(id) {
   if (state.repoId === id) {
     state.repoId = null;
     state.loadedRepoId = null;
-    localStorage.removeItem('rat.repo');
-    $('#workspace').classList.add('hidden');
-    $('#welcome').classList.remove('hidden');
   }
   await refreshRepos();
-  if (!state.repoId) {
-    const firstReady = state.repos.find((r) => r.status === 'ready') || state.repos[0];
-    if (firstReady) selectRepo(firstReady.id);
-  }
+  await applyRoute(); // falls back to the manager page when the open repo was removed
 }
 
 // ---------- filters ---------------------------------------------------------
@@ -732,7 +816,8 @@ function openPicker() {
 
 function wireEvents() {
   // repository list / selectors
-  $('#f-repo').addEventListener('change', (e) => selectRepo(e.target.value));
+  $('#f-repo').addEventListener('change', (e) => nav(repoHash(e.target.value, state.tab)));
+  $('#top-back').addEventListener('click', () => nav('#/'));
   $('#f-author').addEventListener('change', (e) => setAuthor(e.target.value));
   $('#reset-filters').addEventListener('click', resetFilters);
   $('#pick-commits').addEventListener('click', openPicker);
@@ -768,8 +853,8 @@ function wireEvents() {
   $('#f-from').addEventListener('change', () => { state.filters.from = toTs($('#f-from').value, false); refreshMetrics(); });
   $('#f-to').addEventListener('change', () => { state.filters.to = toTs($('#f-to').value, true); refreshMetrics(); });
 
-  // tabs
-  $$('.tab').forEach((t) => t.addEventListener('click', () => { state.tab = t.dataset.tab; renderActiveTab(); }));
+  // tabs (each tab is a route: #/repo/<id>/<tab>)
+  $$('.tab').forEach((t) => t.addEventListener('click', () => { if (state.repoId) nav(repoHash(state.repoId, t.dataset.tab)); }));
 
   // commits tab
   let searchTimer = null;
@@ -837,14 +922,16 @@ function wireEvents() {
   document.addEventListener('click', (e) => {
     const scope = e.target.closest('[data-scope]');
     if (scope) return setPath(scope.getAttribute('data-scope'));
-    const nav = e.target.closest('[data-nav]');
-    if (nav) return setPath(nav.getAttribute('data-nav'));
+    const navEl = e.target.closest('[data-nav]');
+    if (navEl) return setPath(navEl.getAttribute('data-nav'));
     const au = e.target.closest('[data-author]');
     if (au) return setAuthor(au.getAttribute('data-author'));
     const del = e.target.closest('[data-del]');
     if (del) return deleteRepo(del.getAttribute('data-del'));
-    const rep = e.target.closest('.repo-item');
-    if (rep && !e.target.closest('button')) return selectRepo(rep.getAttribute('data-id'));
+    const open = e.target.closest('[data-open]');
+    if (open) return nav(repoHash(open.getAttribute('data-open')));
+    const rep = e.target.closest('.repo-card');
+    if (rep && !e.target.closest('button')) return nav(repoHash(rep.getAttribute('data-id')));
   });
 
   // add repos
@@ -860,8 +947,8 @@ function wireEvents() {
       });
       $('#url-input').value = '';
       await refreshRepos();
-      await selectRepo(repo.id);
       ensurePolling();
+      nav(repoHash(repo.id));
     } catch (err) {
       toast('Could not add repository: ' + err.message);
     }
@@ -890,8 +977,8 @@ function wireEvents() {
       $('#zip-input').value = '';
       const repo = JSON.parse(xhr.responseText);
       await refreshRepos();
-      await selectRepo(repo.id);
       ensurePolling();
+      nav(repoHash(repo.id));
     };
     xhr.onerror = () => {
       btn.disabled = false;
@@ -912,11 +999,8 @@ async function boot() {
     return toast('Cannot reach the server: ' + e.message);
   }
   if (state.repos.some((r) => r.status === 'importing')) ensurePolling();
-  const wanted =
-    state.repos.find((r) => r.id === state.repoId && r.status === 'ready') ||
-    state.repos.find((r) => r.id === state.repoId) ||
-    state.repos.find((r) => r.status === 'ready');
-  if (wanted) await selectRepo(wanted.id);
+  await applyRoute();
 }
 
 document.addEventListener('DOMContentLoaded', boot);
+window.addEventListener('hashchange', applyRoute);

@@ -27,21 +27,22 @@ Then open **http://localhost:3000** (set `PORT` to change the port, e.g. `PORT=8
 
 ## Using the tool
 
-1. **Add a repository** from the sidebar:
+1. **Manage repositories** on the home page (`#/`): each repository is a card with its status (ready / importing with progress / failed) and stats. Click a card (or *Open dashboard*) to enter its workspace. The URL routes the app — `#/` is the repository manager and `#/repo/<id>/<tab>` is one repository's workspace — so browser back/forward and deep links (even refreshing on a tab) work.
+2. **Add a repository**:
    - *Add from URL* — deep-clones any `https://`, `git://`, `ssh://` or `file://` clone URL.
    - *Upload zip* — a zip containing the repository **including its `.git` folder** (the repo may be wrapped in a folder).
    - Multiple repositories can be loaded at once; a progress indicator is shown while cloning/parsing, and results are cached on disk so a restart does not re-parse.
-2. **Filter** with the bar above the tabs:
+3. **Filter** with the bar above the tabs:
    - *Repository* — switch between loaded repositories.
    - *File / directory* — the scope of the metrics; type a path (autocomplete) or click names in the **Files** tab.
    - *Author* — restrict to one author (merged identities included).
    - *Commit set H* — **All commits**, a **time period** (inclusive dates), or a **manual selection** picked from the commit picker (search by hash prefix, tick commits, apply).
-3. **Explore** the tabs:
+4. **Explore** the tabs:
    - **Overview** — metric cards (l+, l−, δ, λ, n, η, ρ), activity timeline chart, top children by churn λ, and ownership ω per author.
    - **Files** — browse the repository; every file/directory row shows its metrics for the current filters. Click a name to scope the metrics to it.
    - **Authors** — per-author commits, modifications n, churn λ and ownership ω.
    - **Commits** — the commit list (newest first) with paging and hash search.
-4. **Author merging**:
+5. **Author merging**:
    - A repository's `.mailmap` is applied automatically during analysis.
    - Identities can also be merged **manually** in the Authors tab: tick two or more authors, choose the target and click *Merge authors*. Merges are persistent and reversible with the ✕ on a merged member row.
 
@@ -85,7 +86,7 @@ Measurement rules: only **non-merge commits reachable from HEAD** are counted; *
 - `server/ingest.js` — zip extraction / URL deep clone and the parse pipeline (with progress reporting).
 - `server/store.js` — in-memory store (interned files/authors, flattened per-commit ops) with a JSON snapshot cache on disk.
 - `server/metrics.js` — the metric engine: filter parsing, commit-set selection, single-pass aggregation of object/children/author/timeline metrics, author merge groups.
-- `public/` — dashboard UI (vanilla JS + Chart.js, no build step).
+- `public/` — dashboard UI (vanilla JS + Chart.js, no build step): hash-routed home and workspace views, SVG logo/favicon (`logo.svg`), filter bar and tab panels.
 
 ## Performance
 

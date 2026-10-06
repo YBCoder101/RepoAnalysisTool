@@ -4,175 +4,188 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>RAT — Repo Analysis Tool</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
 <link rel="stylesheet" href="/style.css" />
 <script src="/vendor/chart.js/chart.umd.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">RAT<span>Repo Analysis Tool</span></div>
-  <div class="hint">file · directory · repository · commit-set · author metrics</div>
+  <a class="brand" href="#/" title="Back to the repository manager">
+    <img class="logo" src="/logo.svg" alt="RAT logo" />
+    <span class="brand-text"><strong>RAT</strong><small>Repo Analysis Tool</small></span>
+  </a>
+  <div class="top-actions">
+    <span id="top-tag" class="muted small">file · directory · repository · commit-set · author metrics</span>
+    <button id="top-back" class="small-btn ghost hidden">⌂ All repositories</button>
+  </div>
 </header>
 
-<div class="layout">
-  <aside class="sidebar">
-    <section class="panel">
-      <h2>Repositories <span id="repo-count" class="badge">0</span></h2>
-      <ul id="repo-list" class="repo-list"></ul>
-      <p id="repo-empty" class="muted small">No repositories yet — add one with a URL or a zip below.</p>
-    </section>
-    <section class="panel">
-      <h2>Add from URL</h2>
-      <form id="url-form" class="stack">
-        <input id="url-input" type="text" placeholder="https://github.com/user/repo.git" spellcheck="false" />
-        <button type="submit" class="primary">Clone &amp; analyse</button>
-      </form>
-      <p class="muted small">Deep-clones the remote repository (needs network access).</p>
-    </section>
-    <section class="panel">
-      <h2>Upload zip</h2>
-      <form id="zip-form" class="stack">
-        <input id="zip-input" type="file" accept=".zip,application/zip" />
-        <button id="zip-btn" type="submit" class="primary">Upload &amp; analyse</button>
-      </form>
-      <p class="muted small">The zip must contain the repository including its <code>.git</code> folder.</p>
-    </section>
-  </aside>
+<main class="page">
+  <!-- ======================= home: repository manager ======================= -->
+  <section id="view-home" class="view">
+    <div class="panel hero">
+      <img class="hero-logo" src="/logo.svg" alt="" />
+      <div>
+        <h1>Analyse a Git repository</h1>
+        <p>File, directory, repository, commit-set and author metrics — computed from the full
+          non-merge history reachable from HEAD.</p>
+        <p class="muted small">Open a repository below, or add one from a clone URL or a zip.
+          Test repositories: cJSON, Redis, Git.</p>
+      </div>
+    </div>
 
-  <main class="main">
-    <section id="welcome" class="panel welcome">
-      <h2>Analyse a Git repository</h2>
-      <p>Add a repository from a clone URL or from a zip with its <code>.git</code> directory, then explore:</p>
-      <ul>
-        <li><strong>File, directory &amp; repository metrics</strong> — l+, l−, growth δ, churn λ, modifications n, modification frequency η, churn rate ρ</li>
-        <li><strong>Commit-set metrics</strong> — any time period, or a hand-picked list of commits</li>
-        <li><strong>Author metrics</strong> — author modifications, author churn and ownership ω (with author merging)</li>
-      </ul>
-      <p class="muted small">Test repositories: cJSON, Redis, Git — paste their clone URLs in the sidebar.</p>
-    </section>
+    <div class="home-grid">
+      <section class="panel">
+        <h2>Repositories <span id="repo-count" class="badge">0</span></h2>
+        <div id="repo-cards" class="repo-cards"></div>
+        <p id="repo-empty" class="muted small">No repositories yet — add one with a URL or a zip.</p>
+      </section>
 
-    <section id="workspace" class="hidden">
-      <div id="repo-status" class="panel status-panel hidden"></div>
+      <aside class="home-side">
+        <section class="panel">
+          <h2>Add from URL</h2>
+          <form id="url-form" class="stack">
+            <input id="url-input" type="text" placeholder="https://github.com/user/repo.git" spellcheck="false" />
+            <button type="submit" class="primary">Clone &amp; analyse</button>
+          </form>
+          <p class="muted small">Deep-clones the remote repository (needs network access).</p>
+        </section>
+        <section class="panel">
+          <h2>Upload zip</h2>
+          <form id="zip-form" class="stack">
+            <input id="zip-input" type="file" accept=".zip,application/zip" />
+            <button id="zip-btn" type="submit" class="primary">Upload &amp; analyse</button>
+          </form>
+          <p class="muted small">The zip must contain the repository including its <code>.git</code> folder.</p>
+        </section>
+      </aside>
+    </div>
+  </section>
 
-      <div id="analysis-ui" class="hidden">
-        <div class="panel filters">
-          <div class="filter-row">
-            <label class="field">
-              <span>Repository</span>
-              <select id="f-repo"></select>
-            </label>
-            <label class="field grow">
-              <span>File / directory <span class="muted small">— scope of the metrics</span></span>
-              <input id="f-path" list="path-options" placeholder="repository root" spellcheck="false" autocomplete="off" />
-              <datalist id="path-options"></datalist>
-            </label>
-            <label class="field">
-              <span>Author</span>
-              <select id="f-author"></select>
-            </label>
+  <!-- ======================= workspace: single repository ======================= -->
+  <section id="view-repo" class="view hidden">
+    <div id="repo-head" class="panel repo-head"></div>
+    <div id="repo-status" class="panel status-panel hidden"></div>
+
+    <div id="analysis-ui" class="hidden">
+      <div class="panel filters">
+        <div class="filter-row">
+          <label class="field">
+            <span>Repository</span>
+            <select id="f-repo"></select>
+          </label>
+          <label class="field grow">
+            <span>File / directory <span class="muted small">— scope of the metrics</span></span>
+            <input id="f-path" list="path-options" placeholder="repository root" spellcheck="false" autocomplete="off" />
+            <datalist id="path-options"></datalist>
+          </label>
+          <label class="field">
+            <span>Author</span>
+            <select id="f-author"></select>
+          </label>
+        </div>
+        <div class="filter-row">
+          <div class="field grow">
+            <span>Commit set H</span>
+            <div class="commit-set">
+              <label class="radio"><input type="radio" name="cmode" value="all" checked /> All commits</label>
+              <label class="radio"><input type="radio" name="cmode" value="period" /> Time period</label>
+              <label class="radio"><input type="radio" name="cmode" value="manual" /> Manual selection</label>
+              <span id="period-controls" class="inline hidden">
+                <label>from <input type="date" id="f-from" /></label>
+                <label>to <input type="date" id="f-to" /></label>
+                <span class="muted small">(inclusive dates, UTC)</span>
+              </span>
+              <span id="manual-controls" class="inline hidden">
+                <button type="button" id="pick-commits" class="primary small-btn">Select commits…</button>
+                <span id="manual-count" class="muted small">nothing selected</span>
+              </span>
+            </div>
           </div>
-          <div class="filter-row">
-            <div class="field grow">
-              <span>Commit set H</span>
-              <div class="commit-set">
-                <label class="radio"><input type="radio" name="cmode" value="all" checked /> All commits</label>
-                <label class="radio"><input type="radio" name="cmode" value="period" /> Time period</label>
-                <label class="radio"><input type="radio" name="cmode" value="manual" /> Manual selection</label>
-                <span id="period-controls" class="inline hidden">
-                  <label>from <input type="date" id="f-from" /></label>
-                  <label>to <input type="date" id="f-to" /></label>
-                  <span class="muted small">(inclusive dates, UTC)</span>
-                </span>
-                <span id="manual-controls" class="inline hidden">
-                  <button type="button" id="pick-commits" class="primary small-btn">Select commits…</button>
-                  <span id="manual-count" class="muted small">nothing selected</span>
-                </span>
-              </div>
-            </div>
-            <div class="field">
-              <span>&nbsp;</span>
-              <button type="button" id="reset-filters" class="ghost">Reset filters</button>
-            </div>
+          <div class="field">
+            <span>&nbsp;</span>
+            <button type="button" id="reset-filters" class="ghost">Reset filters</button>
           </div>
         </div>
-
-        <nav class="tabs">
-          <button class="tab active" data-tab="overview">Overview</button>
-          <button class="tab" data-tab="files">Files</button>
-          <button class="tab" data-tab="authors">Authors</button>
-          <button class="tab" data-tab="commits">Commits</button>
-        </nav>
-
-        <section id="tab-overview" class="tab-panel">
-          <p id="overview-scope" class="scope-line muted"></p>
-          <div id="cards" class="cards"></div>
-          <div class="panel">
-            <h3>Activity timeline</h3>
-            <div class="chart-wrap"><canvas id="timeline-chart"></canvas></div>
-            <p id="timeline-note" class="muted small"></p>
-          </div>
-          <div class="two-col">
-            <div class="panel">
-              <h3>Top children <span class="muted small">by churn λ</span></h3>
-              <div class="table-wrap"><table id="children-table"></table></div>
-            </div>
-            <div class="panel">
-              <h3>Ownership ω <span class="muted small">share of churn by author</span></h3>
-              <div id="ownership-list"></div>
-            </div>
-          </div>
-          <details class="panel glossary">
-            <summary>Metric definitions</summary>
-            <ul>
-              <li><strong>l+</strong> — lines added &nbsp;·&nbsp; <strong>l−</strong> — lines removed &nbsp;·&nbsp; <strong>δ growth</strong> = l+ − l−</li>
-              <li><strong>λ churn</strong> = l+ + l− &nbsp;·&nbsp; <strong>n modifications</strong> — commits in H that changed the object (churn &gt; 0)</li>
-              <li><strong>η modification frequency</strong> = n / |H| &nbsp;·&nbsp; <strong>ρ churn rate</strong> = λ / |H|</li>
-              <li><strong>author modifications n<sub>a</sub></strong> — commits by author a changing the object &nbsp;·&nbsp; <strong>author churn A<sub>a</sub></strong> — lines changed by a</li>
-              <li><strong>ownership ω<sub>a</sub></strong> = A<sub>a</sub> / λ &nbsp;·&nbsp; only non-merge commits reachable from HEAD are counted; renames are followed (≥50% similarity); binary files are not measured; deletions count as removals.</li>
-            </ul>
-          </details>
-        </section>
-
-        <section id="tab-files" class="tab-panel hidden">
-          <div class="panel">
-            <div class="browse-bar">
-              <nav id="breadcrumb" class="breadcrumb"></nav>
-              <span class="muted small">Click a name to scope the metrics to it.</span>
-            </div>
-            <div class="table-wrap"><table id="files-table"></table></div>
-          </div>
-        </section>
-
-        <section id="tab-authors" class="tab-panel hidden">
-          <div class="panel">
-            <h3>Authors <span class="muted small">— .mailmap identities are applied automatically; tick authors to merge identities manually</span></h3>
-            <div id="merge-bar" class="merge-bar hidden">
-              <span id="merge-info" class="small"></span>
-              <label class="small">merge into <select id="merge-target"></select></label>
-              <button id="merge-do" class="primary small-btn">Merge authors</button>
-              <button id="merge-clear" class="small-btn ghost">Clear</button>
-            </div>
-            <div class="table-wrap"><table id="authors-table"></table></div>
-          </div>
-        </section>
-
-        <section id="tab-commits" class="tab-panel hidden">
-          <div class="panel">
-            <div class="browse-bar">
-              <input id="commit-search" placeholder="search by hash prefix…" spellcheck="false" autocomplete="off" />
-              <span id="commit-total" class="muted small"></span>
-            </div>
-            <div class="table-wrap"><table id="commits-table"></table></div>
-            <div class="pager">
-              <button id="commits-prev" class="small-btn">‹ Newer</button>
-              <button id="commits-next" class="small-btn">Older ›</button>
-            </div>
-          </div>
-        </section>
       </div>
-    </section>
-  </main>
-</div>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="files">Files</button>
+        <button class="tab" data-tab="authors">Authors</button>
+        <button class="tab" data-tab="commits">Commits</button>
+      </nav>
+
+      <section id="tab-overview" class="tab-panel">
+        <p id="overview-scope" class="scope-line muted"></p>
+        <div id="cards" class="cards"></div>
+        <div class="panel">
+          <h3>Activity timeline</h3>
+          <div class="chart-wrap"><canvas id="timeline-chart"></canvas></div>
+          <p id="timeline-note" class="muted small"></p>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Top children <span class="muted small">by churn λ</span></h3>
+            <div class="table-wrap"><table id="children-table"></table></div>
+          </div>
+          <div class="panel">
+            <h3>Ownership ω <span class="muted small">share of churn by author</span></h3>
+            <div id="ownership-list"></div>
+          </div>
+        </div>
+        <details class="panel glossary">
+          <summary>Metric definitions</summary>
+          <ul>
+            <li><strong>l+</strong> — lines added &nbsp;·&nbsp; <strong>l−</strong> — lines removed &nbsp;·&nbsp; <strong>δ growth</strong> = l+ − l−</li>
+            <li><strong>λ churn</strong> = l+ + l− &nbsp;·&nbsp; <strong>n modifications</strong> — commits in H that changed the object (churn &gt; 0)</li>
+            <li><strong>η modification frequency</strong> = n / |H| &nbsp;·&nbsp; <strong>ρ churn rate</strong> = λ / |H|</li>
+            <li><strong>author modifications n<sub>a</sub></strong> — commits by author a changing the object &nbsp;·&nbsp; <strong>author churn A<sub>a</sub></strong> — lines changed by a</li>
+            <li><strong>ownership ω<sub>a</sub></strong> = A<sub>a</sub> / λ &nbsp;·&nbsp; only non-merge commits reachable from HEAD are counted; renames are followed (≥50% similarity); binary files are not measured; deletions count as removals.</li>
+          </ul>
+        </details>
+      </section>
+
+      <section id="tab-files" class="tab-panel hidden">
+        <div class="panel">
+          <div class="browse-bar">
+            <nav id="breadcrumb" class="breadcrumb"></nav>
+            <span class="muted small">Click a name to scope the metrics to it.</span>
+          </div>
+          <div class="table-wrap"><table id="files-table"></table></div>
+        </div>
+      </section>
+
+      <section id="tab-authors" class="tab-panel hidden">
+        <div class="panel">
+          <h3>Authors <span class="muted small">— .mailmap identities are applied automatically; tick authors to merge identities manually</span></h3>
+          <div id="merge-bar" class="merge-bar hidden">
+            <span id="merge-info" class="small"></span>
+            <label class="small">merge into <select id="merge-target"></select></label>
+            <button id="merge-do" class="primary small-btn">Merge authors</button>
+            <button id="merge-clear" class="small-btn ghost">Clear</button>
+          </div>
+          <div class="table-wrap"><table id="authors-table"></table></div>
+        </div>
+      </section>
+
+      <section id="tab-commits" class="tab-panel hidden">
+        <div class="panel">
+          <div class="browse-bar">
+            <input id="commit-search" placeholder="search by hash prefix…" spellcheck="false" autocomplete="off" />
+            <span id="commit-total" class="muted small"></span>
+          </div>
+          <div class="table-wrap"><table id="commits-table"></table></div>
+          <div class="pager">
+            <button id="commits-prev" class="small-btn">‹ Newer</button>
+            <button id="commits-next" class="small-btn">Older ›</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
 
 <div id="picker" class="modal hidden">
   <div class="modal-box">
