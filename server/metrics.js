@@ -344,4 +344,12 @@ function listTree(repo, rawPath) {
   return { path: p, type: 'dir', children };
 }
 
-module.exports = { computeMetrics, listCommits, listAuthors, listTree };
+/** All known paths (dirs and files, sorted) for the UI path autocomplete. */
+function listPaths(repo) {
+  return {
+    dirs: Array.from(repo.dirs.keys()).filter(Boolean).sort(),
+    files: repo.files.slice().sort(),
+  };
+}
+
+module.exports = { computeMetrics, listCommits, listAuthors, listTree, listPaths };

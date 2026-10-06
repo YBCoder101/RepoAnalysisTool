@@ -6,7 +6,7 @@ const multer = require('multer');
 
 const { Store } = require('./store');
 const { startUrlIngest, startZipIngest } = require('./ingest');
-const { computeMetrics, listCommits, listAuthors, listTree } = require('./metrics');
+const { computeMetrics, listCommits, listAuthors, listTree, listPaths } = require('./metrics');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
@@ -93,6 +93,10 @@ app.get('/api/repos/:id/authors', requireReadyRepo, (req, res) => {
 
 app.get('/api/repos/:id/tree', requireReadyRepo, (req, res) => {
   res.json(listTree(req.repo, req.query.path || ''));
+});
+
+app.get('/api/repos/:id/paths', requireReadyRepo, (req, res) => {
+  res.json(listPaths(req.repo));
 });
 
 // --- static dashboard -------------------------------------------------------
