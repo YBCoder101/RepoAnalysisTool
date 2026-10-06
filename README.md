@@ -30,7 +30,7 @@ Then open **http://localhost:3000** (set `PORT` to change the port, e.g. `PORT=8
 - [x] Stage 1 — ingestion: clone from URL / zip upload, multi-repo support
 - [x] Stage 2 — metrics engine + API (all metric categories, filtering)
 - [x] Stage 3 — dashboard UI
-- [ ] Stage 4 — author merging (mailmap + manual)
+- [x] Stage 4 — author merging (mailmap + manual)
 - [ ] Stage 5 — polish, performance, final verification
 
 ## Test repositories

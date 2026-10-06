@@ -302,7 +302,7 @@ function listCommits(repo, q) {
     if (query && !c.hash.startsWith(query)) continue;
     matched += 1;
     if (matched <= offset || out.length >= limit) continue;
-    const a = repo.authors[c.authorId];
+    const a = repo.authors[groupOf(repo, c.authorId)];
     out.push({
       hash: c.hash,
       ct: c.ct,
@@ -352,4 +352,32 @@ function listPaths(repo) {
   };
 }
 
-module.exports = { computeMetrics, listCommits, listAuthors, listTree, listPaths };
+/**
+ * Manual author merging: map every author of the given set onto the group of
+ * the merge target (see groupOf). Fully reversible via unmergeAuthor.
+ */
+function mergeAuthors(repo, ids, into) {
+  const list = Array.isArray(ids) ? ids.map(Number) : [];
+  if (list.length < 2) throw badRequest('need at least two author ids to merge');
+  if (!Number.isInteger(into) || !repo.authors[into]) throw badRequest('invalid merge target');
+  for (const id of list) {
+    if (!Number.isInteger(id) || !repo.authors[id]) throw badRequest('invalid author id: ' + id);
+  }
+  const canon = groupOf(repo, into);
+  for (const id of list) {
+    const c = groupOf(repo, id);
+    if (c !== canon) repo.mergedInto.set(c, canon);
+  }
+  return listAuthors(repo);
+}
+
+/** Undo a manual merge; the unmerged author's own sub-group is restored. */
+function unmergeAuthor(repo, id) {
+  const a = Number(id);
+  if (!Number.isInteger(a) || !repo.authors[a]) throw badRequest('invalid author id');
+  if (!repo.mergedInto.has(a)) throw badRequest('author is not merged into another');
+  repo.mergedInto.delete(a);
+  return listAuthors(repo);
+}
+
+module.exports = { computeMetrics, listCommits, listAuthors, listTree, listPaths, groupOf, mergeAuthors, unmergeAuthor };

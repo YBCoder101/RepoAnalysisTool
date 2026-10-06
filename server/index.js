@@ -6,7 +6,7 @@ const multer = require('multer');
 
 const { Store } = require('./store');
 const { startUrlIngest, startZipIngest } = require('./ingest');
-const { computeMetrics, listCommits, listAuthors, listTree, listPaths } = require('./metrics');
+const { computeMetrics, listCommits, listAuthors, listTree, listPaths, mergeAuthors, unmergeAuthor } = require('./metrics');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
@@ -89,6 +89,20 @@ app.get('/api/repos/:id/metrics', requireReadyRepo, (req, res) => {
 
 app.get('/api/repos/:id/authors', requireReadyRepo, (req, res) => {
   res.json(listAuthors(req.repo));
+});
+
+app.post('/api/repos/:id/authors/merge', requireReadyRepo, (req, res) => {
+  const body = req.body || {};
+  const authors = mergeAuthors(req.repo, body.ids, Number(body.into));
+  store.persist(req.repo);
+  res.json(authors);
+});
+
+app.post('/api/repos/:id/authors/unmerge', requireReadyRepo, (req, res) => {
+  const body = req.body || {};
+  const authors = unmergeAuthor(req.repo, Number(body.id));
+  store.persist(req.repo);
+  res.json(authors);
 });
 
 app.get('/api/repos/:id/tree', requireReadyRepo, (req, res) => {

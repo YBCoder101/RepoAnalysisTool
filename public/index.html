@@ -145,7 +145,13 @@
 
         <section id="tab-authors" class="tab-panel hidden">
           <div class="panel">
-            <h3>Authors <span class="muted small">— click a row to filter by that author</span></h3>
+            <h3>Authors <span class="muted small">— .mailmap identities are applied automatically; tick authors to merge identities manually</span></h3>
+            <div id="merge-bar" class="merge-bar hidden">
+              <span id="merge-info" class="small"></span>
+              <label class="small">merge into <select id="merge-target"></select></label>
+              <button id="merge-do" class="primary small-btn">Merge authors</button>
+              <button id="merge-clear" class="small-btn ghost">Clear</button>
+            </div>
             <div class="table-wrap"><table id="authors-table"></table></div>
           </div>
         </section>

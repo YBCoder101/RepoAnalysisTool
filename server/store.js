@@ -92,6 +92,7 @@ class Store {
       dirs: new Map(),
       ops: null,
       stats: null,
+      mergedInto: new Map(), // manual author merges: authorId -> canonical authorId
     };
     this.repos.set(repo.id, repo);
     return repo;
@@ -231,6 +232,7 @@ class Store {
         createdAt: repo.createdAt,
         stats: repo.stats,
         phase: repo.phase,
+        merges: Array.from(repo.mergedInto || []),
       },
       files: repo.files,
       authors: repo.authors,
@@ -269,6 +271,7 @@ class Store {
         ops: snap.ops,
       });
       repo.stats = snap.meta.stats;
+      repo.mergedInto = new Map(snap.meta.merges || []);
       repo.status = 'ready';
       repo.phase = 'loaded';
       repo.error = null;

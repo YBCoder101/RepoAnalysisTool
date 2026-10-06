@@ -19,6 +19,7 @@ const state = {
   metrics: null,
   commits: { items: [], total: 0, offset: 0, limit: 100, q: '' },
   picker: { items: [], offset: 0, total: 0, q: '', selected: new Set(), pageSize: 1000 },
+  mergePicks: new Set(),
   poll: null,
   chart: null,
 };
@@ -152,6 +153,7 @@ async function selectRepo(id) {
     localStorage.setItem('rat.repo', id);
     state.filters = { path: '', author: 'all', mode: 'all', from: '', to: '', hashes: [] };
     state.picker.selected = new Set();
+    state.mergePicks.clear();
     state.metrics = null;
     state.loadedRepoId = null;
     state.authors = [];
@@ -210,12 +212,13 @@ async function deleteRepo(id) {
 // ---------- filters ---------------------------------------------------------
 
 function buildAuthorSelect() {
-  const seen = new Set();
+  const memberCount = new Map();
+  for (const a of state.authors) memberCount.set(a.group, (memberCount.get(a.group) || 0) + 1);
   const opts = ['<option value="all">All authors</option>'];
   for (const a of state.authors) {
-    if (seen.has(a.id)) continue;
-    seen.add(a.id);
-    opts.push(`<option value="${a.id}">${esc(a.name)} — ${esc(a.email)}</option>`);
+    if (a.group !== a.id) continue; // only canonical identities in the filter
+    const n = memberCount.get(a.id) || 1;
+    opts.push(`<option value="${a.id}">${esc(a.name)} — ${esc(a.email)}${n > 1 ? ` (+${n - 1} merged)` : ''}</option>`);
   }
   $('#f-author').innerHTML = opts.join('');
   $('#f-author').value = state.filters.author;
@@ -244,8 +247,9 @@ function updateManualCount() {
 function syncFilterControls() {
   $('#f-path').value = state.filters.path;
   if (state.authors.length) {
+    const a = state.authors.find((x) => String(x.id) === state.filters.author);
+    state.filters.author = a ? String(a.group) : 'all';
     $('#f-author').value = state.filters.author;
-    if (!$('#f-author').value) { $('#f-author').value = 'all'; state.filters.author = 'all'; }
   }
   $$('input[name="cmode"]').forEach((r) => { r.checked = r.value === state.filters.mode; });
   $('#period-controls').classList.toggle('hidden', state.filters.mode !== 'period');
@@ -261,7 +265,8 @@ function setPath(p) {
 }
 
 function setAuthor(id) {
-  state.filters.author = String(id);
+  const a = state.authors.find((x) => x.id === Number(id));
+  state.filters.author = String(a ? a.group : id);
   if ($('#f-author').querySelector(`option[value="${state.filters.author}"]`)) $('#f-author').value = state.filters.author;
   refreshMetrics();
 }
@@ -508,26 +513,121 @@ async function renderFiles() {
 function renderAuthors() {
   const m = state.metrics;
   const inSet = new Map(((m && m.authors) || []).map((a) => [a.id, a]));
-  const rows = state.authors.map((a) => {
-    const s = inSet.get(a.id);
-    return { id: a.id, name: a.name, email: a.email, commits: a.commits, mods: s ? s.mods : 0, churn: s ? s.churn : 0, ownership: s ? s.ownership : 0, active: !!s };
+  const byId = new Map(state.authors.map((a) => [a.id, a]));
+  const groups = new Map(); // canonical id -> { canon, members[], commits }
+  for (const a of state.authors) {
+    let g = groups.get(a.group);
+    if (!g) { g = { canon: byId.get(a.group), members: [], commits: 0 }; groups.set(a.group, g); }
+    g.members.push(a);
+    g.commits += a.commits;
+  }
+  const rows = Array.from(groups.values()).map((g) => {
+    const s = inSet.get(g.canon.id);
+    return { g, mods: s ? s.mods : 0, churn: s ? s.churn : 0, ownership: s ? s.ownership : 0, active: !!s };
   });
-  rows.sort((x, y) => y.churn - x.churn || y.commits - x.commits || x.name.localeCompare(y.name));
-  $('#authors-table').innerHTML =
-    '<thead><tr><th>Author</th><th>Email</th><th class="num">commits</th><th class="num">n</th><th class="num">λ</th><th class="num">ω</th></tr></thead><tbody>' +
-    rows
-      .map(
-        (a) => `<tr class="clickable${a.active ? '' : ' no-activity'}" data-author="${a.id}" title="Filter by this author">
-          <td>${esc(a.name)}</td>
+  rows.sort((x, y) => y.churn - x.churn || y.g.commits - x.g.commits || x.g.canon.name.localeCompare(y.g.canon.name));
+
+  const body = rows
+    .map((r) => {
+      const c = r.g.canon;
+      const others = r.g.members.filter((a) => a.id !== c.id).sort((a, b) => b.commits - a.commits);
+      const badge = others.length ? ` <span class="group-badge">${r.g.members.length} identities</span>` : '';
+      let html = `<tr class="${r.active ? '' : 'no-activity'}">
+        <td><input type="checkbox" data-pick="${c.id}" ${state.mergePicks.has(c.id) ? 'checked' : ''} title="Select for manual merge"></td>
+        <td><span class="obj-name" data-author="${c.id}" title="Filter by this author">${esc(c.name)}</span>${badge}</td>
+        <td class="muted">${esc(c.email)}</td>
+        <td class="num">${fmtInt(r.g.commits)}</td>
+        <td class="num">${r.active ? fmtInt(r.mods) : '–'}</td>
+        <td class="num">${r.active ? fmtInt(r.churn) : '–'}</td>
+        <td class="num">${r.active ? fmtPct(r.ownership) : '–'}</td>
+        <td></td>
+      </tr>`;
+      html += others
+        .map(
+          (a) => `<tr class="no-activity member-row">
+          <td></td>
+          <td><span class="member-name">↳</span> <span class="obj-name" data-author="${a.id}" title="Filter by this author">${esc(a.name)}</span></td>
           <td class="muted">${esc(a.email)}</td>
           <td class="num">${fmtInt(a.commits)}</td>
-          <td class="num">${a.active ? fmtInt(a.mods) : '–'}</td>
-          <td class="num">${a.active ? fmtInt(a.churn) : '–'}</td>
-          <td class="num">${a.active ? fmtPct(a.ownership) : '–'}</td>
+          <td class="num">–</td>
+          <td class="num">–</td>
+          <td class="num">–</td>
+          <td><button class="icon-btn" data-unmerge="${a.id}" title="Unmerge from ${esc(c.name)}">✕</button></td>
         </tr>`
-      )
-      .join('') +
+        )
+        .join('');
+      return html;
+    })
+    .join('');
+
+  $('#authors-table').innerHTML =
+    '<thead><tr><th></th><th>Author</th><th>Email</th><th class="num">commits</th><th class="num">n</th><th class="num">λ</th><th class="num">ω</th><th></th></tr></thead><tbody>' +
+    body +
     '</tbody>';
+  renderMergeBar();
+}
+
+function renderMergeBar() {
+  const picks = Array.from(state.mergePicks).filter((id) => state.authors.some((a) => a.id === id && a.group === a.id));
+  const bar = $('#merge-bar');
+  if (picks.length < 2) {
+    bar.classList.add('hidden');
+    return;
+  }
+  bar.classList.remove('hidden');
+  const picked = state.authors.filter((a) => picks.includes(a.id)).sort((a, b) => b.commits - a.commits);
+  $('#merge-info').textContent = `${picks.length} authors selected`;
+  const prev = Number($('#merge-target').value);
+  $('#merge-target').innerHTML = picked
+    .map((a) => `<option value="${a.id}">${esc(a.name)} — ${esc(a.email)} (${fmtInt(a.commits)} commits)</option>`)
+    .join('');
+  if (picked.some((a) => a.id === prev)) $('#merge-target').value = String(prev);
+}
+
+async function doMerge() {
+  const repo = selectedRepo();
+  const picks = Array.from(state.mergePicks);
+  if (!repo || picks.length < 2) return;
+  const into = Number($('#merge-target').value);
+  const target = state.authors.find((a) => a.id === into);
+  if (!target) return;
+  let authors;
+  try {
+    authors = await api(`/api/repos/${repo.id}/authors/merge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: picks, into }),
+    });
+  } catch (e) {
+    return toast('Merge failed: ' + e.message);
+  }
+  afterAuthorsChanged(authors);
+  toast(`Merged ${picks.length} identities into “${target.name}”`, 'ok');
+}
+
+async function doUnmerge(id) {
+  const repo = selectedRepo();
+  if (!repo) return;
+  let authors;
+  try {
+    authors = await api(`/api/repos/${repo.id}/authors/unmerge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+  } catch (e) {
+    return toast('Unmerge failed: ' + e.message);
+  }
+  afterAuthorsChanged(authors);
+}
+
+function afterAuthorsChanged(authors) {
+  state.authors = authors.sort((a, b) => b.commits - a.commits);
+  state.mergePicks.clear();
+  buildAuthorSelect();
+  syncFilterControls();
+  renderAuthors();
+  refreshMetrics();
 }
 
 // ---------- commits tab -----------------------------------------------------
@@ -712,6 +812,22 @@ function wireEvents() {
     syncFilterControls();
     refreshMetrics();
   });
+
+  // authors tab: manual merging
+  $('#authors-table').addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-pick]');
+    if (!cb) return;
+    const id = Number(cb.getAttribute('data-pick'));
+    if (cb.checked) state.mergePicks.add(id);
+    else state.mergePicks.delete(id);
+    renderMergeBar();
+  });
+  $('#authors-table').addEventListener('click', (e) => {
+    const ub = e.target.closest('button[data-unmerge]');
+    if (ub) doUnmerge(Number(ub.getAttribute('data-unmerge')));
+  });
+  $('#merge-do').addEventListener('click', doMerge);
+  $('#merge-clear').addEventListener('click', () => { state.mergePicks.clear(); renderAuthors(); });
 
   // delegated clicks: scope/navigate/author/delete/select-repo
   document.addEventListener('click', (e) => {
