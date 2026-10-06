@@ -1,0 +1,26 @@
+{
+  "name": "repo-analysis-tool",
+  "version": "1.0.0",
+  "description": "RAT - web dashboard for measuring file, directory, repository, commit-set and author metrics of Git repositories (COMS3011A test).",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "keywords": [
+    "git",
+    "metrics",
+    "dashboard",
+    "repository"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "chart.js": "^4.5.1",
+    "express": "^4.22.3",
+    "multer": "^2.4.0"
+  }
+}

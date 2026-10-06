@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAT — Repo Analysis Tool</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #e6edf3;
+      display: flex; min-height: 100vh; align-items: center; justify-content: center;
+    }
+    .card {
+      text-align: center; padding: 48px 64px;
+      border: 1px solid #21262d; border-radius: 16px; background: #161b22;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    p { margin: 4px 0; color: #8b949e; }
+    #health { margin-top: 16px; font-size: 13px; }
+    .ok { color: #3fb950; }
+    .bad { color: #f85149; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>RAT — Repo Analysis Tool</h1>
+    <p>Metrics for repositories, directories, files, commit sets and authors.</p>
+    <p>Stage 0: scaffold — the dashboard arrives in later commits.</p>
+    <div id="health">checking API…</div>
+  </div>
+  <script>
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((d) => {
+        document.getElementById('health').innerHTML =
+          '<span class="ok">API OK</span> — ' + d.app + ' v' + d.version;
+      })
+      .catch(() => {
+        document.getElementById('health').innerHTML =
+          '<span class="bad">API unreachable</span>';
+      });
+  </script>
+</body>
+</html>
